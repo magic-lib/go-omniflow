@@ -303,3 +303,52 @@ func main() {
 	srv.Shutdown()
 }
 ```
+
+```go
+// 逻辑代码
+const TypeEmailSend = "email:send"
+
+// 任务数据
+type EmailPayload struct {
+    UserID  int    `json:"user_id"`
+    Message string `json:"message"`
+}
+
+// 任务处理器
+func HandleEmailTask(ctx context.Context, p *EmailPayload) error {
+    fmt.Printf("[Email] 用户 %d 邮件发送成功！\n", p.UserID)
+    return nil
+}
+
+//生产者：
+payload := &common.EmailPayload{UserID: 101, Message: "重要任务！"}
+_, _, err := client.EnqueueNow(common.TypeEmailSend, payload,
+sasynq.WithQueue("critical"),
+sasynq.WithRetry(5),
+)
+
+// Enqueue：直接入队已创建的 Task
+task, err := sasynq.NewTask(common.TypeEmailSend, payload)
+info, err := client.Enqueue(task, sasynq.WithQueue("low"))
+
+// EnqueueNow：立即执行
+_, info, err := client.EnqueueNow(common.TypeSMSSend, payload, sasynq.WithRetry(3))
+
+// EnqueueIn：5秒后执行
+_, info, err := client.EnqueueIn(5*time.Second, common.TypeMsgNotification, payload)
+
+// EnqueueAt：指定时间执行
+_, info, err := client.EnqueueAt(time.Now().Add(10*time.Second), common.TypeEmailSend, payload)
+
+
+
+//消费者：
+srv := sasynq.NewServer(redisCfg, sasynq.DefaultServerConfig())
+sasynq.RegisterTaskHandler(srv.Mux(), common.TypeEmailSend, sasynq.HandleFunc(common.HandleEmailTask))
+srv.Run()
+
+//定时任务：
+scheduler.RegisterTask("@every 1m", "request:url", &payload)
+
+
+```
