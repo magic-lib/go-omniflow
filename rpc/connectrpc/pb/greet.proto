@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package = "github.com/magic-lib/go-omniflow/rpc/conectrpc/pb;greetpb";
+
+// 定义请求/响应结构
+message GreetRequest {
+string name = 1;
+}
+message GreetResponse {
+string message = 1;
+}
+
+// 定义服务
+service GreetService {
+rpc Greet(GreetRequest) returns (GreetResponse);
+}
